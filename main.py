@@ -27,6 +27,7 @@ class Shana(object):
     def __init__(self) -> None:
         super().__init__()
         self.cookie = {}
+        self.resp = '开始签到 \n'
 
     def __put_cookie(self, items):
         for item in items:
@@ -66,6 +67,8 @@ class Shana(object):
             return obj["data"]["ticket"]
         else:
             logger.error("登录失败, 短期内登录失败次数过多, 服务器已开启验证码, 请在1-3天后再试...")
+            self.resp += "登录失败, 短期内登录失败次数过多, 服务器已开启验证码, 请考虑手动重试\n"
+            sjPush(self.resp)
             return ""
 
     # 设置cookie
@@ -109,6 +112,7 @@ class Shana(object):
         r = requests.get(url, cookies=self.cookie)
         self.__put_cookie(r.cookies.items())
         logger.info("设置cookie成功...")
+        self.resp += "设置cookie成功...\n"
 
     # 查询角色列表
     def step5(self) -> str:
@@ -134,8 +138,10 @@ class Shana(object):
         for r in attach:
             if r["worldnameZh"] == Config.server_name and r["name"] == Config.role_name:
                 logger.info("获取角色列表成功...")
+                self.resp += "获取角色列表成功...\n"
                 return role.format(r["cicuid"], r["worldname"], r["groupid"])
         logger.error("获取角色列表失败...")
+        self.resp += "获取角色列表失败...\n"
         return ""
 
     # 选择区服及角色
@@ -159,6 +165,7 @@ class Shana(object):
         r = requests.post(url, params=params, cookies=self.cookie)
         self.__put_cookie(r.cookies.items())
         logger.info("已选择目标角色...")
+        self.resp += "已选择目标角色...\n"
 
     # 签到
     def step7(self):
@@ -184,7 +191,9 @@ class Shana(object):
         attach = obj["Attach"]
         jifen = json.loads(attach)["Jifen"]
         logger.info("当前积分为: %d" % jifen)
-
+        self.resp += "签到成功\n"+ "当前积分为: %d" % jifen + "\n"
+        sjPush(self.resp)
+        
     def go(self):
         ticket = self.step1()
         if ticket == "":
@@ -200,6 +209,17 @@ class Shana(object):
         self.step8()
         time.sleep(5)
 
-
+        
+# 推送
+    def sjPush(serverJ_message):
+       serverJ = '此处填写SendKey'  # server酱的sendkey
+       api = "https://sctapi.ftqq.com/"+ serverJ + ".send"
+       title = u"FF14签到通知"
+       content = serverJ_message
+       data = {
+           "text":title,
+           "desp":content
+       }
+       req = requests.post(api,data = data)
 if __name__ == "__main__":
     Shana().go()
